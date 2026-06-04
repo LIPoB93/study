@@ -1,20 +1,5 @@
-{
-  "name": "전기산업기사 스터디 키",
-  "short_name": "스터디 키",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#101010",
-  "theme_color": "#171717",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
-}
+const CACHE='electrical-study-key-v3';
+const ASSETS=['./','./index.html','./style.css','./course-data.js','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
+self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))])));
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
