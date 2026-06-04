@@ -8,12 +8,12 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon-192.png" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <header class="app-header">
     <div>
-      <div class="eyebrow">PERSONAL STUDY APP</div>
+      <div class="eyebrow">FLEXCIL STUDY MODE</div>
       <h1>전기산업기사 <span>스터디 키</span></h1>
     </div>
     <button class="icon-btn" id="installBtn" hidden>설치</button>
@@ -34,8 +34,16 @@
         <div class="stat card"><span>오늘 목표</span><strong id="dailyGoal">90분</strong></div>
         <div class="stat card"><span>연속 학습</span><strong id="streak">0일</strong></div>
         <div class="stat card"><span>전체 진도</span><strong id="overallProgress">0%</strong></div>
-        <div class="stat card"><span>복습 대기</span><strong id="reviewCount">0개</strong></div>
+        <div class="stat card"><span>오늘 복습</span><strong id="reviewCount">0개</strong></div>
       </div>
+
+      <section class="card flexcil-guide">
+        <div>
+          <div class="eyebrow">아이패드 공부 흐름</div>
+          <h3>페이지를 복사하고 플렉슬에서 필기하세요.</h3>
+          <p class="muted small">공부 앱은 일정·진도·복습을 관리하고, PDF 필기와 문제 풀이는 플렉슬에 남깁니다.</p>
+        </div>
+      </section>
 
       <section class="card timer-card">
         <div>
@@ -52,7 +60,7 @@
       <section class="section-head">
         <div>
           <h2>오늘 할 일</h2>
-          <p class="muted">밀린 분량을 몰아넣지 않고, 가능한 시간 안에서 자동 배정합니다.</p>
+          <p class="muted">못 끝낸 PART는 사라지지 않고 다음 학습에 다시 표시됩니다.</p>
         </div>
         <button class="secondary" id="minimumMode">최소 분량</button>
       </section>
@@ -61,7 +69,7 @@
       <section class="section-head">
         <div>
           <h2>최근 기출 점수</h2>
-          <p class="muted">기출 PDF는 나중에 추가해도 됩니다. 점수부터 기록할 수 있습니다.</p>
+          <p class="muted">산업기사 기출을 풀기 시작하면 점수를 기록하세요.</p>
         </div>
       </section>
       <div id="scoreSummary" class="card"></div>
@@ -71,7 +79,7 @@
       <section class="section-head">
         <div>
           <h2>교재 진도</h2>
-          <p class="muted">업로드한 교재 목차를 PART 단위로 나눴습니다.</p>
+          <p class="muted">PART별 페이지를 복사한 뒤 플렉슬에서 이동하세요.</p>
         </div>
       </section>
       <div id="subjectProgress" class="stack"></div>
@@ -81,11 +89,29 @@
       <section class="section-head">
         <div>
           <h2>오답노트</h2>
-          <p class="muted">문제 자체보다, 왜 틀렸는지만 짧게 남기세요.</p>
+          <p class="muted">필기는 플렉슬에 남기고, 여기에는 다시 볼 위치와 이유를 기록합니다.</p>
         </div>
         <button class="primary" id="addWrongBtn">오답 추가</button>
       </section>
       <div id="wrongList" class="stack"></div>
+    </section>
+
+    <section id="view-memorize" class="view">
+      <section class="section-head">
+        <div>
+          <h2>출퇴근 암기</h2>
+          <p class="muted">아이폰에서 헷갈린 오답과 복습 예정 PART만 빠르게 확인하세요.</p>
+        </div>
+      </section>
+      <div class="card quick-mode">
+        <div class="eyebrow">빠른 복습</div>
+        <div class="inline-actions" style="margin-top:10px">
+          <button class="secondary" onclick="setMemorizeLimit(5)">5개</button>
+          <button class="secondary" onclick="setMemorizeLimit(10)">10개</button>
+          <button class="secondary" onclick="setMemorizeLimit(999)">전체</button>
+        </div>
+      </div>
+      <div id="memorizeList" class="stack"></div>
     </section>
 
     <section id="view-exams" class="view">
@@ -99,48 +125,28 @@
       <div id="examList" class="stack"></div>
     </section>
 
-    <section id="view-resources" class="view">
-      <section class="section-head">
-        <div>
-          <h2>자료 보관함</h2>
-          <p class="muted">PDF는 서버가 아니라 현재 기기의 브라우저 저장소에 보관됩니다.</p>
-        </div>
-      </section>
-      <div class="card">
-        <h3>기본 교재 PDF</h3>
-        <p class="muted small">올려주신 「전기기사 필기 치트키」 PDF를 선택하세요. 앱 파일에는 원본 PDF가 포함되어 있지 않습니다.</p>
-        <label class="file-label">PDF 선택<input type="file" id="mainPdfInput" accept="application/pdf" /></label>
-        <div id="mainPdfStatus" class="resource-status"></div>
-      </div>
-      <div class="card">
-        <h3>산업기사 기출 PDF</h3>
-        <p class="muted small">지금은 비워두고, 나중에 연도별 기출을 추가하면 됩니다.</p>
-        <label class="file-label">기출 PDF 추가<input type="file" id="pastPdfInput" accept="application/pdf" multiple /></label>
-        <div id="pastPdfList" class="stack compact"></div>
-      </div>
-      <div class="card">
-        <h3>백업</h3>
-        <p class="muted small">브라우저를 초기화하기 전에 기록을 파일로 백업하세요.</p>
-        <div class="inline-actions">
-          <button class="secondary" id="exportBtn">기록 내보내기</button>
-          <label class="file-label secondary-label">기록 불러오기<input type="file" id="importInput" accept="application/json" /></label>
-        </div>
-      </div>
-    </section>
-
     <section id="view-settings" class="view">
       <section class="section-head">
         <div>
           <h2>설정</h2>
-          <p class="muted">시험일과 하루 공부시간은 언제든 바꿀 수 있습니다.</p>
+          <p class="muted">시험일, 공부시간, 동기화 정보를 관리합니다.</p>
         </div>
       </section>
+
       <form id="settingsForm" class="card form-grid">
         <label>목표 시험일<input type="date" id="targetDate" /></label>
         <label>하루 목표 시간<input type="number" id="dailyMinutes" min="30" max="240" step="10" /></label>
+        <label>플렉슬에서 사용할 교재 이름<input type="text" id="flexcilDocument" placeholder="예: 전기기사 필기 치트키" /></label>
+        <label>플렉슬 실행용 링크 <small>선택 사항 · 단축어 링크가 있을 때만 입력</small><input type="url" id="flexcilUrl" placeholder="예: shortcuts://run-shortcut?name=플렉슬열기" /></label>
         <label class="toggle-row"><input type="checkbox" id="includeControl" /> 제어공학 포함 <small>전기산업기사 준비에서는 기본 제외</small></label>
         <button type="submit" class="primary">설정 저장</button>
       </form>
+
+      <div class="card">
+        <h3>플렉슬 사용 방법</h3>
+        <p class="muted small">기본적으로 앱의 `페이지 복사` 버튼을 누른 뒤 플렉슬로 전환합니다. 플렉슬의 특정 문서·특정 페이지를 외부 앱에서 바로 여는 방식은 사용하지 않습니다.</p>
+      </div>
+
       <div class="card">
         <h3>아이패드 · 아이폰 동기화</h3>
         <p class="muted small">GAS 웹앱 주소는 기본 입력되어 있습니다. setup() 실행 로그에서 확인한 API_KEY만 현재 기기에 입력하세요.</p>
@@ -157,15 +163,28 @@
         </div>
         <div id="syncStatus" class="resource-status">아직 연결하지 않았습니다.</div>
       </div>
+
       <div class="card">
-        <h3>아이폰 홈 화면에 추가</h3>
+        <h3>기록 백업</h3>
+        <p class="muted small">구글 시트 동기화와 별도로 JSON 백업 파일을 보관할 수 있습니다.</p>
+        <div class="inline-actions">
+          <button class="secondary" id="exportBtn">기록 내보내기</button>
+          <label class="file-label secondary-label">기록 불러오기<input type="file" id="importInput" accept="application/json" /></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>홈 화면에 추가</h3>
         <p class="muted small">Safari에서 배포 주소를 연 뒤 공유 버튼 → ‘홈 화면에 추가’를 누르면 앱처럼 사용할 수 있습니다.</p>
       </div>
+
       <div class="card">
         <h3>초기화</h3>
-        <p class="muted small">진도·오답·점수·공부시간 기록을 지웁니다. PDF 파일은 자료 보관함에서 따로 삭제할 수 있습니다.</p>
+        <p class="muted small">진도·오답·점수·공부시간 기록을 지웁니다.</p>
         <button class="danger" id="resetDataBtn">학습 기록 초기화</button>
       </div>
+
+      <div class="app-version">Flexcil Mode v6</div>
     </section>
   </main>
 
@@ -173,8 +192,8 @@
     <button data-view="home" class="active">오늘</button>
     <button data-view="progress">진도</button>
     <button data-view="wrong">오답</button>
+    <button data-view="memorize">암기</button>
     <button data-view="exams">기출</button>
-    <button data-view="resources">자료</button>
     <button data-view="settings">설정</button>
   </nav>
 
@@ -194,38 +213,13 @@
     <form method="dialog" id="wrongForm" class="dialog-card">
       <h3>오답 추가</h3>
       <label>과목<select id="wrongSubject"></select></label>
-      <label>교재 페이지<input id="wrongPage" type="number" min="1" max="999" /></label>
+      <label>플렉슬 교재 페이지<input id="wrongPage" type="number" min="1" max="999" /></label>
       <label>문제 번호<input id="wrongNumber" placeholder="예: Q012" /></label>
       <label>틀린 이유<select id="wrongReason">
         <option>공식 미암기</option><option>개념 부족</option><option>계산 실수</option><option>문제 해석 실패</option><option>다시 봐도 모름</option>
       </select></label>
-      <label>메모<textarea id="wrongMemo" rows="3" placeholder="한 줄만 적어도 충분합니다."></textarea></label>
-      <label>문제 이미지 <small>선택 사항 · 아이패드 캡처 화면을 첨부하면 저장 후 바로 필기할 수 있습니다.</small><input id="wrongImageInput" type="file" accept="image/*" /></label>
+      <label>암기할 내용 또는 메모<textarea id="wrongMemo" rows="3" placeholder="예: 임피던스 공식과 역률 계산 다시 보기"></textarea></label>
       <div class="inline-actions"><button value="save" class="primary">저장</button><button value="cancel" class="secondary">취소</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="noteDialog" class="wide-dialog">
-    <form method="dialog" class="dialog-card note-dialog-card">
-      <div class="subject-title">
-        <div>
-          <h3 id="noteTitle">오답 필기</h3>
-          <p class="muted small">문제 이미지는 현재 기기에 저장됩니다. 애플펜슬 또는 손가락으로 풀이를 적으세요.</p>
-        </div>
-        <button value="close" class="secondary">닫기</button>
-      </div>
-      <div class="note-toolbar">
-        <label class="file-label secondary-label">문제 이미지 선택<input id="noteImageInput" type="file" accept="image/*" /></label>
-        <label class="tool-label">펜 굵기<input id="penSize" type="range" min="2" max="18" value="5" /></label>
-        <button type="button" class="secondary" id="noteUndoBtn">되돌리기</button>
-        <button type="button" class="secondary" id="noteClearBtn">필기 지우기</button>
-        <button type="button" class="primary" id="noteSaveBtn">필기 저장</button>
-      </div>
-      <div id="noteEmpty" class="empty note-empty">문제 이미지를 선택하면 필기판이 열립니다.</div>
-      <div class="canvas-wrap" id="canvasWrap" hidden>
-        <canvas id="noteCanvas"></canvas>
-      </div>
-      <div id="noteStatus" class="resource-status"></div>
     </form>
   </dialog>
 
@@ -239,7 +233,7 @@
     </form>
   </dialog>
 
-  <script src="course-data.js"></script>
-  <script src="app.js"></script>
+  <script src="course-data.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
