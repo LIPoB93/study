@@ -151,8 +151,27 @@ async function getAllFiles(){const db=await dbOpen();return new Promise((resolve
 async function delFile(id){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
 byId('mainPdfInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;await putFile({id:'main',type:'main',name:f.name,blob:f,created:new Date().toISOString()});renderResources();alert('기본 교재 PDF를 이 기기에 저장했습니다.')}
 byId('pastPdfInput').onchange=async e=>{for(const f of e.target.files){await putFile({id:'past-'+crypto.randomUUID(),type:'past',name:f.name,blob:f,created:new Date().toISOString()})}renderResources()}
-async function openMainPdf(page=1){const f=await getFile('main');if(!f){alert('자료 메뉴에서 기본 교재 PDF를 먼저 선택하세요.');showView('resources');return}const url=URL.createObjectURL(f.blob);window.open(`${url}#page=${page}`,'_blank')}
-async function openResource(id){const f=await getFile(id);if(!f)return;window.open(URL.createObjectURL(f.blob),'_blank')}
+async function openMainPdf(page=1){
+ const popup=window.open('about:blank','_blank');
+ try{
+  const f=await getFile('main');
+  if(!f){if(popup)popup.close();alert('자료 메뉴에서 기본 교재 PDF를 먼저 선택하세요.');showView('resources');return}
+  const url=URL.createObjectURL(f.blob);
+  const target=`${url}#page=${page}`;
+  if(popup){popup.location.href=target}else{window.location.href=target}
+  setTimeout(()=>URL.revokeObjectURL(url),30*60*1000);
+ }catch(err){if(popup)popup.close();alert('PDF를 열지 못했습니다. 자료 메뉴에서 PDF를 다시 등록해주세요.');console.error(err)}
+}
+async function openResource(id){
+ const popup=window.open('about:blank','_blank');
+ try{
+  const f=await getFile(id);
+  if(!f){if(popup)popup.close();return}
+  const url=URL.createObjectURL(f.blob);
+  if(popup){popup.location.href=url}else{window.location.href=url}
+  setTimeout(()=>URL.revokeObjectURL(url),30*60*1000);
+ }catch(err){if(popup)popup.close();alert('PDF를 열지 못했습니다. 파일을 다시 등록해주세요.');console.error(err)}
+}
 async function deleteResource(id){if(confirm('이 기기에서 PDF를 삭제할까요?')){await delFile(id);renderResources()}}
 async function renderResources(){const files=await getAllFiles();const main=files.find(f=>f.id==='main');byId('mainPdfStatus').innerHTML=main?`저장됨: ${escapeHtml(main.name)} <button class="secondary" onclick="openMainPdf(1)">열기</button> <button class="secondary" onclick="deleteResource('main')">삭제</button>`:'아직 저장된 교재 PDF가 없습니다.';const past=files.filter(f=>f.type==='past');byId('pastPdfList').innerHTML=past.length?past.map(f=>`<div class="module-row"><div><h4>${escapeHtml(f.name)}</h4><div class="task-meta">${new Date(f.created).toLocaleDateString()}</div></div><div class="right-actions"><button class="secondary" onclick="openResource('${f.id}')">열기</button><button class="secondary" onclick="deleteResource('${f.id}')">삭제</button></div></div>`).join(''):'<div class="resource-status">추가된 기출 PDF가 없습니다.</div>'}
 byId('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`전기산업기사-학습기록-${today()}.json`;a.click()}
