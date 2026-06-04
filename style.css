@@ -15,3 +15,7 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--panel);c
 @media(max-width:650px){.stats-grid{grid-template-columns:repeat(2,1fr)}.timer-card{display:block}.timer-actions{margin-top:12px}.score-grid{grid-template-columns:repeat(3,1fr)}.task{display:block}.task-actions{flex-direction:row;margin-top:10px}.app-header{padding-top:14px}}
 
 .sync-good{color:var(--good)}.sync-warn{color:var(--warn)}.sync-bad{color:var(--danger)}
+
+/* 오답 이미지 필기 */
+.wide-dialog{width:min(96vw,980px);max-height:92vh;overflow:auto}.note-dialog-card{gap:12px}.note-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tool-label{display:flex;flex-direction:row;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}.tool-label input{width:130px;padding:0}.canvas-wrap{max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff;padding:4px}.canvas-wrap canvas{display:block;width:100%;height:auto;touch-action:none;background:#fff}.note-empty{border:1px dashed var(--line);border-radius:12px}.tag.note{background:#203146;color:#9bc8ff}
+@media(max-width:650px){.note-toolbar{align-items:stretch}.note-toolbar button,.note-toolbar .file-label{flex:1 1 auto;justify-content:center}.tool-label{width:100%;justify-content:space-between}.tool-label input{width:55%}.wide-dialog{width:96vw}}

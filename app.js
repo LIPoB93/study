@@ -15,6 +15,7 @@ let state=loadState();
 let syncConfig=loadSyncConfig();
 let syncTimer=null, syncBusy=false;
 let timerSeconds=0, timerHandle=null, pendingModule=null, deferredInstallPrompt=null;
+let activeWrongId=null, noteDrawing=false, noteLastPoint=null, noteHistory=[];
 
 function defaultState(){
  return {settings:{targetDate:'2026-08-07',dailyMinutes:90,includeControl:false},completed:{},reviews:[],wrong:[],exams:[],studyLog:{},minimumMode:false};
@@ -108,11 +109,31 @@ function finishReview(id){const r=state.reviews.find(x=>x.id===id);if(r){r.done=
 
 function renderWrong(){
  const list=[...state.wrong].sort((a,b)=>b.created.localeCompare(a.created));
- byId('wrongList').innerHTML=list.length?list.map(w=>`<div class="card task"><div><span class="tag">${escapeHtml(subj(w.subjectId)?.name||'기타')}</span><h3>${escapeHtml(w.number||'문제번호 없음')} · ${escapeHtml(w.reason)}</h3><div class="task-meta">PDF ${w.page||'-'}페이지 · 다음 복습 ${w.nextReview}<br>${escapeHtml(w.memo||'')}</div></div><div class="task-actions"><button class="secondary" onclick="openMainPdf(${Number(w.page)||1})">PDF</button><button class="secondary" onclick="deleteWrong('${w.id}')">삭제</button></div></div>`).join(''):'<div class="card empty">아직 등록한 오답이 없습니다.</div>';
+ byId('wrongList').innerHTML=list.length?list.map(w=>`<div class="card task"><div><span class="tag">${escapeHtml(subj(w.subjectId)?.name||'기타')}</span>${w.hasLocalImage?'<span class="tag note">이미지 필기</span>':''}<h3>${escapeHtml(w.number||'문제번호 없음')} · ${escapeHtml(w.reason)}</h3><div class="task-meta">PDF ${w.page||'-'}페이지 · 다음 복습 ${w.nextReview}<br>${escapeHtml(w.memo||'')}</div></div><div class="task-actions"><button class="secondary" onclick="openMainPdf(${Number(w.page)||1})">PDF</button><button class="primary" onclick="openWrongNote('${w.id}')">필기</button><button class="secondary" onclick="deleteWrong('${w.id}')">삭제</button></div></div>`).join(''):'<div class="card empty">아직 등록한 오답이 없습니다.</div>';
 }
-function deleteWrong(id){state.wrong=state.wrong.filter(w=>w.id!==id);saveState();renderWrong()}
+async function deleteWrong(id){state.wrong=state.wrong.filter(w=>w.id!==id);await delFile('wrong-original-'+id).catch(()=>{});await delFile('wrong-note-'+id).catch(()=>{});saveState();renderWrong()}
 byId('addWrongBtn').onclick=()=>byId('wrongDialog').showModal();
-byId('wrongForm').addEventListener('submit',e=>{e.preventDefault(); const action=e.submitter?.value;if(action==='save'){state.wrong.push({id:crypto.randomUUID(),subjectId:byId('wrongSubject').value,page:byId('wrongPage').value,number:byId('wrongNumber').value,reason:byId('wrongReason').value,memo:byId('wrongMemo').value,nextReview:addDays(today(),3),created:new Date().toISOString()});saveState();renderWrong();e.target.reset()}byId('wrongDialog').close(action||'cancel')})
+byId('wrongForm').addEventListener('submit',async e=>{e.preventDefault(); const action=e.submitter?.value;if(action==='save'){const id=crypto.randomUUID();const image=byId('wrongImageInput').files[0];state.wrong.push({id,subjectId:byId('wrongSubject').value,page:byId('wrongPage').value,number:byId('wrongNumber').value,reason:byId('wrongReason').value,memo:byId('wrongMemo').value,nextReview:addDays(today(),3),created:new Date().toISOString(),hasLocalImage:Boolean(image)});if(image){await putFile({id:'wrong-original-'+id,type:'wrong-original',name:image.name,blob:image,created:new Date().toISOString()})}saveState();renderWrong();e.target.reset();if(image)setTimeout(()=>openWrongNote(id),100)}byId('wrongDialog').close(action||'cancel')})
+
+
+function noteCanvas(){return byId('noteCanvas')}
+function setNoteStatus(message,type=''){const el=byId('noteStatus');el.textContent=message;el.className='resource-status '+type}
+function canvasPoint(event){const canvas=noteCanvas(),rect=canvas.getBoundingClientRect();return {x:(event.clientX-rect.left)*canvas.width/rect.width,y:(event.clientY-rect.top)*canvas.height/rect.height}}
+function captureNoteSnapshot(){const canvas=noteCanvas();if(!canvas.width)return;noteHistory.push(canvas.toDataURL('image/png'));if(noteHistory.length>15)noteHistory.shift()}
+function drawImageOnCanvas(blob){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(blob);img.onload=()=>{const canvas=noteCanvas();const maxWidth=1600,scale=Math.min(1,maxWidth/img.naturalWidth);canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);byId('canvasWrap').hidden=false;byId('noteEmpty').hidden=true;noteHistory=[canvas.toDataURL('image/png')];resolve()};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('이미지를 읽지 못했습니다.'))};img.src=url})}
+async function loadWrongCanvas(id,preferAnnotated=true){const note=preferAnnotated?await getFile('wrong-note-'+id):null;const original=await getFile('wrong-original-'+id);const target=note||original;if(!target){byId('canvasWrap').hidden=true;byId('noteEmpty').hidden=false;noteHistory=[];setNoteStatus('문제 이미지를 선택해주세요.');return false}await drawImageOnCanvas(target.blob);setNoteStatus(note?'저장된 필기를 불러왔습니다.':'문제 이미지를 불러왔습니다. 풀이를 적어보세요.','sync-good');return true}
+async function openWrongNote(id){activeWrongId=id;const wrong=state.wrong.find(w=>w.id===id);byId('noteTitle').textContent=(wrong?.number||'문제번호 없음')+' · 오답 필기';byId('noteDialog').showModal();await loadWrongCanvas(id,true)}
+async function saveWrongNote(){if(!activeWrongId||byId('canvasWrap').hidden){setNoteStatus('먼저 문제 이미지를 선택해주세요.','sync-warn');return}const canvas=noteCanvas();const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));await putFile({id:'wrong-note-'+activeWrongId,type:'wrong-note',name:'annotated-'+activeWrongId+'.png',blob,created:new Date().toISOString()});const wrong=state.wrong.find(w=>w.id===activeWrongId);if(wrong){wrong.hasLocalImage=true;wrong.hasAnnotation=true}saveState();renderWrong();setNoteStatus('필기를 현재 기기에 저장했습니다.','sync-good')}
+byId('noteImageInput').onchange=async e=>{const f=e.target.files[0];if(!f||!activeWrongId)return;await putFile({id:'wrong-original-'+activeWrongId,type:'wrong-original',name:f.name,blob:f,created:new Date().toISOString()});await delFile('wrong-note-'+activeWrongId).catch(()=>{});const wrong=state.wrong.find(w=>w.id===activeWrongId);if(wrong){wrong.hasLocalImage=true;wrong.hasAnnotation=false}saveState();renderWrong();await loadWrongCanvas(activeWrongId,false);e.target.value=''}
+byId('noteSaveBtn').onclick=saveWrongNote;
+byId('noteUndoBtn').onclick=()=>{if(noteHistory.length<=1)return;noteHistory.pop();const img=new Image();img.onload=()=>{const canvas=noteCanvas(),ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height)};img.src=noteHistory[noteHistory.length-1]};
+byId('noteClearBtn').onclick=async()=>{if(!activeWrongId)return;if(confirm('작성한 필기만 지우고 원본 문제 이미지로 돌아갈까요?')){await delFile('wrong-note-'+activeWrongId).catch(()=>{});const wrong=state.wrong.find(w=>w.id===activeWrongId);if(wrong)wrong.hasAnnotation=false;saveState();await loadWrongCanvas(activeWrongId,false);renderWrong()}};
+['pointerdown','pointermove','pointerup','pointercancel','pointerleave'].forEach(type=>noteCanvas().addEventListener(type,event=>{
+ const canvas=noteCanvas(),ctx=canvas.getContext('2d');
+ if(type==='pointerdown'){event.preventDefault();canvas.setPointerCapture?.(event.pointerId);noteDrawing=true;noteLastPoint=canvasPoint(event);captureNoteSnapshot();return}
+ if(type==='pointermove'&&noteDrawing){event.preventDefault();const point=canvasPoint(event);ctx.strokeStyle='#d31919';ctx.lineWidth=Number(byId('penSize').value||5);ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(noteLastPoint.x,noteLastPoint.y);ctx.lineTo(point.x,point.y);ctx.stroke();noteLastPoint=point;return}
+ if((type==='pointerup'||type==='pointercancel'||type==='pointerleave')&&noteDrawing){noteDrawing=false;noteLastPoint=null}
+},{passive:false}));
 
 function renderExamInputs(){byId('examScoreInputs').innerHTML=subjects.filter(s=>s.required).map(s=>`<label>${escapeHtml(s.name)}<input type="number" min="0" max="100" step="5" data-score="${s.id}" placeholder="점수" /></label>`).join('')}
 byId('addExamBtn').onclick=()=>{byId('examDate').value=today();byId('examDialog').showModal()}

@@ -200,7 +200,32 @@
         <option>공식 미암기</option><option>개념 부족</option><option>계산 실수</option><option>문제 해석 실패</option><option>다시 봐도 모름</option>
       </select></label>
       <label>메모<textarea id="wrongMemo" rows="3" placeholder="한 줄만 적어도 충분합니다."></textarea></label>
+      <label>문제 이미지 <small>선택 사항 · 아이패드 캡처 화면을 첨부하면 저장 후 바로 필기할 수 있습니다.</small><input id="wrongImageInput" type="file" accept="image/*" /></label>
       <div class="inline-actions"><button value="save" class="primary">저장</button><button value="cancel" class="secondary">취소</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="noteDialog" class="wide-dialog">
+    <form method="dialog" class="dialog-card note-dialog-card">
+      <div class="subject-title">
+        <div>
+          <h3 id="noteTitle">오답 필기</h3>
+          <p class="muted small">문제 이미지는 현재 기기에 저장됩니다. 애플펜슬 또는 손가락으로 풀이를 적으세요.</p>
+        </div>
+        <button value="close" class="secondary">닫기</button>
+      </div>
+      <div class="note-toolbar">
+        <label class="file-label secondary-label">문제 이미지 선택<input id="noteImageInput" type="file" accept="image/*" /></label>
+        <label class="tool-label">펜 굵기<input id="penSize" type="range" min="2" max="18" value="5" /></label>
+        <button type="button" class="secondary" id="noteUndoBtn">되돌리기</button>
+        <button type="button" class="secondary" id="noteClearBtn">필기 지우기</button>
+        <button type="button" class="primary" id="noteSaveBtn">필기 저장</button>
+      </div>
+      <div id="noteEmpty" class="empty note-empty">문제 이미지를 선택하면 필기판이 열립니다.</div>
+      <div class="canvas-wrap" id="canvasWrap" hidden>
+        <canvas id="noteCanvas"></canvas>
+      </div>
+      <div id="noteStatus" class="resource-status"></div>
     </form>
   </dialog>
 
